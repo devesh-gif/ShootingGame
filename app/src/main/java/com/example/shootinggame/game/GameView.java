@@ -10,20 +10,27 @@ import android.graphics.Rect;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-
+import android.graphics.Matrix;
 
 import com.example.shootinggame.Joystick;
 import com.example.shootinggame.R;
 import com.example.shootinggame.characters.Enemy;
 import com.example.shootinggame.characters.Player;
 import com.example.shootinggame.objects.Bullet;
+
+import java.util.ArrayList;
+
 public class GameView extends SurfaceView implements Runnable {
     private static final int MENU = 0;
     private static final int SELECT_BACKGROUND = 1;
     private static final int GAME = 2;
     private static final int PLAYER_SIZE = 180;
     private static final int ENEMY_SIZE = 280;
+    private boolean firePressed = false;
 
+    private long lastFireTime = 0;
+
+    private final long FIRE_DELAY = 150; // milliseconds
     private int gameState = MENU;
     private boolean jumpPressed = false;
     Thread thread;
@@ -42,7 +49,7 @@ public class GameView extends SurfaceView implements Runnable {
 
     Rect shootButton;
     Rect jumpButton;
-    Bullet bullet;
+    private ArrayList<Bullet> bullets = new ArrayList<>();
 
     Bitmap[] playerFrames = new Bitmap[6];
     Bitmap[] enemyFrames = new Bitmap[6];
@@ -82,7 +89,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         player = new Player(100, 560);
         enemy = new Enemy(1500, 700);
-        bullet = new Bullet();
+
         joystick = new Joystick(
                 170,
                 getResources().getDisplayMetrics().heightPixels - 170
@@ -127,11 +134,13 @@ public class GameView extends SurfaceView implements Runnable {
 
         if (joystick.isLeft()) {
             player.moveLeft();
+            player.setFacingRight(false);
             bgX -= bgSpeed;
         }
 
         if (joystick.isRight()) {
             player.moveRight();
+            player.setFacingRight(true);
             bgX -= bgSpeed;
         }
 
@@ -140,7 +149,11 @@ public class GameView extends SurfaceView implements Runnable {
         }
 
         enemy.move();
-        bullet.move();
+        for (int i = 0; i < bullets.size(); i++) {
+
+            bullets.get(i).move();
+
+        }
 
         frameCounter++;
 
@@ -166,19 +179,72 @@ public class GameView extends SurfaceView implements Runnable {
         }
 
         // Bullet collision
-        if (bullet.active &&
-                bullet.getX() > enemy.getX() &&
-                bullet.getX() < enemy.getX() + ENEMY_SIZE &&
-                bullet.getY() > enemy.getY() &&
-                bullet.getY() < enemy.getY() + ENEMY_SIZE) {
+        for (int i = bullets.size() - 1; i >= 0; i--) {
 
-            enemy.takeDamage(player.getDamage());
-            bullet.active = false;
-            if (enemy.getHealth() <= 0) {
+            Bullet bullet = bullets.get(i);
 
-                // Respawn enemy
-                enemy = new Enemy(2000, 700);
+            if (bullet.active &&
+                    bullet.getX() > enemy.getX() &&
+                    bullet.getX() < enemy.getX() + ENEMY_SIZE &&
+                    bullet.getY() > enemy.getY() &&
+                    bullet.getY() < enemy.getY() + ENEMY_SIZE) {
 
+                enemy.takeDamage(player.getDamage());
+
+                bullets.remove(i);
+
+                if (enemy.getHealth() <= 0) {
+
+                    enemy = new Enemy(2000,700);
+
+                }
+
+            }
+
+        }
+
+        // Continuous Fire
+        if (firePressed) {
+
+            long currentTime = System.currentTimeMillis();
+
+            if (currentTime - lastFireTime > FIRE_DELAY) {
+
+                Bullet bullet = new Bullet();
+
+                if (player.isFacingRight()) {
+
+                    bullet.shoot(
+                            player.getX() + 130,
+                            player.getY() + 90,
+                            1
+                    );
+
+                } else {
+
+                    bullet.shoot(
+                            player.getX(),
+                            player.getY() + 90,
+                            -1
+                    );
+
+                }
+
+                bullets.add(bullet);
+
+                    lastFireTime = currentTime;
+                }
+            }
+
+        // Remove bullets that go off-screen
+        for (int i = bullets.size() - 1; i >= 0; i--) {
+
+            Bullet bullet = bullets.get(i);
+
+            if (bullet.getX() > getWidth() + 100 ||
+                    bullet.getX() < -100) {
+
+                bullets.remove(i);
             }
         }
     }
@@ -326,21 +392,49 @@ public class GameView extends SurfaceView implements Runnable {
 
         if (joystick.isLeft() || joystick.isRight()) {
 
-            canvas.drawBitmap(
-                    playerBitmap,
-                    player.getX(),
-                    player.getY(),
-                    null
-            );
+            Matrix matrix = new Matrix();
+
+            if (player.isFacingRight()) {
+
+                matrix.postTranslate(
+                        player.getX(),
+                        player.getY()
+                );
+
+            } else {
+
+                matrix.preScale(-1, 1);
+
+                matrix.postTranslate(
+                        player.getX() + playerBitmap.getWidth(),
+                        player.getY()
+                );
+            }
+
+            canvas.drawBitmap(playerBitmap, matrix, null);
 
         } else {
 
-            canvas.drawBitmap(
-                    idleBitmap,
-                    player.getX(),
-                    player.getY(),
-                    null
-            );
+            Matrix matrix = new Matrix();
+
+            if (player.isFacingRight()) {
+
+                matrix.postTranslate(
+                        player.getX(),
+                        player.getY()
+                );
+
+            } else {
+
+                matrix.preScale(-1, 1);
+
+                matrix.postTranslate(
+                        player.getX() + playerBitmap.getWidth(),
+                        player.getY()
+                );
+            }
+
+            canvas.drawBitmap(idleBitmap, matrix, null);
         }
 
         canvas.drawBitmap(
@@ -353,13 +447,19 @@ public class GameView extends SurfaceView implements Runnable {
         Paint bulletPaint = new Paint();
         bulletPaint.setColor(Color.YELLOW);
 
-        if (bullet.active) {
-            canvas.drawCircle(
-                    bullet.getX(),
-                    bullet.getY(),
-                    12,
-                    bulletPaint
-            );
+        for (Bullet bullet : bullets) {
+
+            if (bullet.active) {
+
+                canvas.drawCircle(
+                        bullet.getX(),
+                        bullet.getY(),
+                        12,
+                        bulletPaint
+                );
+
+            }
+
         }
         joystick.draw(canvas);
 
@@ -496,80 +596,97 @@ public class GameView extends SurfaceView implements Runnable {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (gameState == MENU) {
-            gameState = SELECT_BACKGROUND;
-            return true;
-        }
 
         float x = event.getX();
         float y = event.getY();
-        if (gameState == SELECT_BACKGROUND &&
-                event.getAction() == MotionEvent.ACTION_DOWN) {
 
-            if (lightForestButton.contains((int)x, (int)y)) {
-
-                currentBg = forestlightBg;
-                gameState = GAME;
-                return true;
+        // MENU
+        if (gameState == MENU) {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                gameState = SELECT_BACKGROUND;
             }
-
-            if (darkForestButton.contains((int)x, (int)y)) {
-
-                currentBg = forestdarkBg;
-                gameState = GAME;
-                return true;
-            }
+            return true;
         }
 
-        switch(event.getAction()){
+        // BACKGROUND SELECTION
+        if (gameState == SELECT_BACKGROUND) {
+
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+
+                if (lightForestButton.contains((int)x, (int)y)) {
+                    currentBg = forestlightBg;
+                    gameState = GAME;
+                }
+
+                if (darkForestButton.contains((int)x, (int)y)) {
+                    currentBg = forestdarkBg;
+                    gameState = GAME;
+                }
+            }
+
+            return true;
+        }
+
+        switch (event.getActionMasked()) {
 
             case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_POINTER_DOWN:
 
-                // If touching joystick
-                if (joystick.contains(x, y)) {
-                    joystick.update(x, y);
-                } else {
-                    // Touch anywhere else → center the joystick
-                    joystick.reset();
-                }
+                for (int i = 0; i < event.getPointerCount(); i++) {
 
-                // FIRE button
-                int dx = (int)x - (getWidth() - 150);
-                int dy = (int)y - (getHeight() - 150);
+                    float px = event.getX(i);
+                    float py = event.getY(i);
 
-                if (dx * dx + dy * dy <= 80 * 80) {
-                    if (!bullet.active) {
-                        bullet.shoot(player.getX() + 130, player.getY() + 90);
+                    // JOYSTICK
+                    if (joystick.contains(px, py)) {
+                        joystick.update(px, py);
                     }
-                }
 
-                // JUMP button
-                if (jumpButton.contains((int)x, (int)y)) {
-                    player.jump();
+                    // FIRE BUTTON
+                    int dx = (int)px - (getWidth() - 150);
+                    int dy = (int)py - (getHeight() - 150);
+
+                    if (dx * dx + dy * dy <= 80 * 80) {
+                        firePressed = true;
+                    }
+
+                    // JUMP BUTTON
+                    if (jumpButton.contains((int)px, (int)py)) {
+                        player.jump();
+                    }
                 }
 
                 break;
 
             case MotionEvent.ACTION_MOVE:
 
-                if (joystick.contains(x, y)) {
-                    joystick.update(x, y);
+                for (int i = 0; i < event.getPointerCount(); i++) {
+
+                    float px = event.getX(i);
+                    float py = event.getY(i);
+
+                    if (joystick.contains(px, py)) {
+                        joystick.update(px, py);
+                    }
                 }
 
                 break;
 
             case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_POINTER_UP:
 
-                joystick.reset();
-                jumpPressed = false;
+                firePressed = false;
 
-                invalidate();
+                if (event.getPointerCount() <= 1) {
+                    joystick.reset();
+                }
 
                 break;
         }
 
         return true;
     }
+
 
     public void resume() {
         isPlaying = true;

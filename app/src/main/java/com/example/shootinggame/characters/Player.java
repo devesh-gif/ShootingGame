@@ -2,6 +2,7 @@ package com.example.shootinggame.characters;
 
 public class Player extends Character {
     private int speed;
+    private boolean facingRight = true;
     private int velocityY = 0;
     private boolean isJumping = false;
     private final int gravity = 1;
@@ -11,7 +12,13 @@ public class Player extends Character {
         this.damage = 20;
         speed = 15;
     }
+    public boolean isFacingRight() {
+        return facingRight;
+    }
 
+    public void setFacingRight(boolean facingRight) {
+        this.facingRight = facingRight;
+    }
     public void move() {
         x += speed;
     }
