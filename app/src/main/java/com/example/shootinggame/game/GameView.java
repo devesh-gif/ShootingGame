@@ -14,7 +14,7 @@ import android.graphics.Matrix;
 
 import com.example.shootinggame.Joystick;
 import com.example.shootinggame.R;
-import com.example.shootinggame.characters.Enemy;
+import com.example.shootinggame.characters.Boss;
 import com.example.shootinggame.characters.Player;
 import com.example.shootinggame.objects.Bullet;
 
@@ -25,7 +25,7 @@ public class GameView extends SurfaceView implements Runnable {
     private static final int SELECT_BACKGROUND = 1;
     private static final int GAME = 2;
     private static final int PLAYER_SIZE = 180;
-    private static final int ENEMY_SIZE = 280;
+    private static final int BOSS_SIZE = 280;
     private boolean firePressed = false;
 
     private long lastFireTime = 0;
@@ -59,7 +59,7 @@ public class GameView extends SurfaceView implements Runnable {
     int frameCounter = 0;
 
     Player player;
-    Enemy enemy;
+    Boss boss;
     float joystickX = 170;
     float joystickY = 0;
     Bitmap forestlightBg;
@@ -88,7 +88,7 @@ public class GameView extends SurfaceView implements Runnable {
         enemyFrames[5] = BitmapFactory.decodeResource(getResources(), R.drawable.enemy6);
 
         player = new Player(100, 560);
-        enemy = new Enemy(1500, 700);
+        boss = new Boss(1500, 700);
 
         joystick = new Joystick(
                 170,
@@ -148,7 +148,7 @@ public class GameView extends SurfaceView implements Runnable {
             bgX = 0;
         }
 
-        enemy.move();
+        boss.moveTowardsPlayer(player.getX());
         for (int i = 0; i < bullets.size(); i++) {
 
             bullets.get(i).move();
@@ -173,10 +173,7 @@ public class GameView extends SurfaceView implements Runnable {
             frameCounter = 0;
         }
 
-        // Enemy respawn
-        if (enemy.getX() < -500) {
-            enemy = new Enemy(2000, 700);
-        }
+
 
         // Bullet collision
         for (int i = bullets.size() - 1; i >= 0; i--) {
@@ -184,19 +181,17 @@ public class GameView extends SurfaceView implements Runnable {
             Bullet bullet = bullets.get(i);
 
             if (bullet.active &&
-                    bullet.getX() > enemy.getX() &&
-                    bullet.getX() < enemy.getX() + ENEMY_SIZE &&
-                    bullet.getY() > enemy.getY() &&
-                    bullet.getY() < enemy.getY() + ENEMY_SIZE) {
+                    bullet.getX() > boss.getX() &&
+                    bullet.getX() < boss.getX() + BOSS_SIZE &&
+                    bullet.getY() > boss.getY() &&
+                    bullet.getY() < boss.getY() + BOSS_SIZE) {
 
-                enemy.takeDamage(player.getDamage());
+                boss.takeDamage(player.getDamage());
 
                 bullets.remove(i);
 
-                if (enemy.getHealth() <= 0) {
-
-                    enemy = new Enemy(2000,700);
-
+                if (boss.isDead()) {
+                    // Victory Screen
                 }
 
             }
@@ -323,7 +318,7 @@ public class GameView extends SurfaceView implements Runnable {
         canvas.drawRect(
                 enemyLeft,
                 70,
-                enemyLeft + (enemy.getHealth() * enemyBarWidth / enemy.getMaxHealth()),
+                enemyLeft + (boss.getHealth() * enemyBarWidth / boss.getMaxHealth()),
                 100,
                 healthPaint
         );
@@ -337,7 +332,7 @@ public class GameView extends SurfaceView implements Runnable {
         );
 
         canvas.drawText(
-                enemy.getHealth() + "/" + enemy.getMaxHealth(),
+                boss.getHealth() + "/" + boss.getMaxHealth(),
                 enemyLeft + 90,
                 130,
                 textPaint
@@ -390,59 +385,30 @@ public class GameView extends SurfaceView implements Runnable {
                 false
         );
 
-        if (joystick.isLeft() || joystick.isRight()) {
-
-            Matrix matrix = new Matrix();
-
-            if (player.isFacingRight()) {
-
-                matrix.postTranslate(
-                        player.getX(),
-                        player.getY()
-                );
-
-            } else {
-
-                matrix.preScale(-1, 1);
-
-                matrix.postTranslate(
-                        player.getX() + playerBitmap.getWidth(),
-                        player.getY()
-                );
-            }
-
-            canvas.drawBitmap(playerBitmap, matrix, null);
-
+        // Player Drawing
+        Matrix playerMatrix = new Matrix();
+        if (player.isFacingRight()) {
+            playerMatrix.postTranslate(player.getX(), player.getY());
         } else {
-
-            Matrix matrix = new Matrix();
-
-            if (player.isFacingRight()) {
-
-                matrix.postTranslate(
-                        player.getX(),
-                        player.getY()
-                );
-
-            } else {
-
-                matrix.preScale(-1, 1);
-
-                matrix.postTranslate(
-                        player.getX() + playerBitmap.getWidth(),
-                        player.getY()
-                );
-            }
-
-            canvas.drawBitmap(idleBitmap, matrix, null);
+            playerMatrix.preScale(-1, 1);
+            playerMatrix.postTranslate(player.getX() + playerBitmap.getWidth(), player.getY());
         }
 
-        canvas.drawBitmap(
-                enemyBitmap,
-                enemy.getX(),
-                enemy.getY(),
-                null
-        );
+        if (joystick.isLeft() || joystick.isRight()) {
+            canvas.drawBitmap(playerBitmap, playerMatrix, null);
+        } else {
+            canvas.drawBitmap(idleBitmap, playerMatrix, null);
+        }
+
+        // Boss Drawing
+        Matrix bossMatrix = new Matrix();
+        if (!boss.isFacingRight()) {
+            bossMatrix.postTranslate(boss.getX(), boss.getY());
+        } else {
+            bossMatrix.preScale(-1, 1);
+            bossMatrix.postTranslate(boss.getX() + enemyBitmap.getWidth(), boss.getY());
+        }
+        canvas.drawBitmap(enemyBitmap, bossMatrix, null);
 
         Paint bulletPaint = new Paint();
         bulletPaint.setColor(Color.YELLOW);
