@@ -6,7 +6,7 @@ public class Enemy extends Character {
     public Enemy(int x, int y) {
         super(x, y, 100);
         this.damage = 15;
-        this.speed = 3;
+        this.speed = 30;
     }
 
     public void takeDamage(int amount) {

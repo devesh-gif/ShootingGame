@@ -11,13 +11,16 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.graphics.Matrix;
-
-import com.example.shootinggame.Joystick;
+import com.example.shootinggame.effects.Explosioneffect;
+import com.example.shootinggame.game.Joystick;
 import com.example.shootinggame.R;
 import com.example.shootinggame.characters.Boss;
 import com.example.shootinggame.characters.Player;
-import com.example.shootinggame.objects.Bullet;
-
+import com.example.shootinggame.bullets.Bullet;
+import com.example.shootinggame.bullets.RocketBullet;
+import com.example.shootinggame.bullets.GrenadeBullet;
+import com.example.shootinggame.bullets.FlameBullet;
+import com.example.shootinggame.bullets.LaserBullet;
 import java.util.ArrayList;
 
 public class GameView extends SurfaceView implements Runnable {
@@ -27,7 +30,7 @@ public class GameView extends SurfaceView implements Runnable {
     private static final int PLAYER_SIZE = 180;
     private static final int BOSS_SIZE = 280;
     private boolean firePressed = false;
-
+    private ArrayList<Explosioneffect> explosions = new ArrayList<>();
     private long lastFireTime = 0;
 
     private final long FIRE_DELAY = 150; // milliseconds
@@ -149,10 +152,8 @@ public class GameView extends SurfaceView implements Runnable {
         }
 
         boss.moveTowardsPlayer(player.getX());
-        for (int i = 0; i < bullets.size(); i++) {
-
-            bullets.get(i).move();
-
+        for (Bullet bullet : bullets) {
+            bullet.move();
         }
 
         frameCounter++;
@@ -180,20 +181,68 @@ public class GameView extends SurfaceView implements Runnable {
 
             Bullet bullet = bullets.get(i);
 
-            if (bullet.active &&
+            if (bullet.isActive() &&
                     bullet.getX() > boss.getX() &&
                     bullet.getX() < boss.getX() + BOSS_SIZE &&
                     bullet.getY() > boss.getY() &&
                     bullet.getY() < boss.getY() + BOSS_SIZE) {
 
-                boss.takeDamage(player.getDamage());
+                if (bullet instanceof RocketBullet) {
 
-                bullets.remove(i);
+                    RocketBullet rocket = (RocketBullet) bullet;
 
-                if (boss.isDead()) {
-                    // Victory Screen
+                    explosions.add(new Explosioneffect(
+                            rocket.getX(),
+                            rocket.getY(),
+                            rocket.getExplosionRadius()));
+
+                    boss.takeDamage(rocket.getDamage());
+
+                    rocket.deactivate();
                 }
 
+                else if (bullet instanceof GrenadeBullet) {
+
+                    GrenadeBullet grenade = (GrenadeBullet) bullet;
+
+                    explosions.add(new Explosioneffect(
+                            grenade.getX(),
+                            grenade.getY(),
+                            grenade.getExplosionRadius()));
+
+                    boss.takeDamage(grenade.getDamage());
+
+                    grenade.deactivate();
+                }
+
+                else if (bullet instanceof LaserBullet) {
+
+                    boss.takeDamage(bullet.getDamage());
+
+                    // Laser continues flying
+                }
+
+                else if (bullet instanceof FlameBullet) {
+
+                    boss.takeDamage(bullet.getDamage());
+
+                    bullet.deactivate();
+                }
+
+                else {
+
+                    boss.takeDamage(bullet.getDamage());
+
+                    bullet.deactivate();
+                }
+
+                if (!bullet.isActive()) {
+                    bullets.remove(i);
+                }
+
+                if (boss.isDead()) {
+                    // Victory
+                }
             }
 
         }
@@ -205,27 +254,13 @@ public class GameView extends SurfaceView implements Runnable {
 
             if (currentTime - lastFireTime > FIRE_DELAY) {
 
-                Bullet bullet = new Bullet();
+                ArrayList<Bullet> firedBullets = player.getWeapon().fire(
+                        player.getX(),
+                        player.getY(),
+                        player.isFacingRight()
+                );
 
-                if (player.isFacingRight()) {
-
-                    bullet.shoot(
-                            player.getX() + 130,
-                            player.getY() + 90,
-                            1
-                    );
-
-                } else {
-
-                    bullet.shoot(
-                            player.getX(),
-                            player.getY() + 90,
-                            -1
-                    );
-
-                }
-
-                bullets.add(bullet);
+                bullets.addAll(firedBullets);
 
                     lastFireTime = currentTime;
                 }
@@ -236,10 +271,19 @@ public class GameView extends SurfaceView implements Runnable {
 
             Bullet bullet = bullets.get(i);
 
-            if (bullet.getX() > getWidth() + 100 ||
-                    bullet.getX() < -100) {
-
+            if (!bullet.isActive()) {
                 bullets.remove(i);
+            }
+
+        }
+        for (int i = explosions.size() - 1; i >= 0; i--) {
+
+            Explosioneffect explosion = explosions.get(i);
+
+            explosion.update();
+
+            if (!explosion.isAlive()) {
+                explosions.remove(i);
             }
         }
     }
@@ -402,7 +446,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         // Boss Drawing
         Matrix bossMatrix = new Matrix();
-        if (!boss.isFacingRight()) {
+        if (boss.isFacingRight()) {
             bossMatrix.postTranslate(boss.getX(), boss.getY());
         } else {
             bossMatrix.preScale(-1, 1);
@@ -415,7 +459,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         for (Bullet bullet : bullets) {
 
-            if (bullet.active) {
+            if (bullet.isActive()) {
 
                 canvas.drawCircle(
                         bullet.getX(),
@@ -426,6 +470,9 @@ public class GameView extends SurfaceView implements Runnable {
 
             }
 
+        }
+        for (Explosioneffect explosion : explosions) {
+            explosion.draw(canvas);
         }
         joystick.draw(canvas);
 
