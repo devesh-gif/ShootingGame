@@ -1,5 +1,5 @@
 package com.example.shootinggame.characters;
-
+import android.graphics.Rect;
 import com.example.shootinggame.weapons.Pistol;
 import com.example.shootinggame.weapons.Weapon;
 
@@ -15,6 +15,15 @@ public class Player extends Character {
 
     // NEW
     private Weapon currentWeapon;
+    public Rect getHitbox() {
+
+        return new Rect(
+                x + 45,
+                y + 15,
+                x + 135,
+                y + 170
+        );
+    }
 
     public Player(int x, int y) {
 
@@ -55,7 +64,7 @@ public class Player extends Character {
 
         if (!isJumping) {
 
-            velocityY = -15;
+            velocityY = -22;
             isJumping = true;
 
         }
@@ -83,4 +92,5 @@ public class Player extends Character {
         if (health < 0)
             health = 0;
     }
+
 }

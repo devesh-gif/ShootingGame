@@ -27,8 +27,10 @@ public class GameView extends SurfaceView implements Runnable {
     private static final int MENU = 0;
     private static final int SELECT_BACKGROUND = 1;
     private static final int GAME = 2;
+    private static final int GAME_OVER = 3;
     private static final int PLAYER_SIZE = 180;
     private static final int BOSS_SIZE = 280;
+    private ArrayList<Bullet> bossBullets = new ArrayList<>();
     private boolean firePressed = false;
     private ArrayList<Explosioneffect> explosions = new ArrayList<>();
     private long lastFireTime = 0;
@@ -155,6 +157,20 @@ public class GameView extends SurfaceView implements Runnable {
         for (Bullet bullet : bullets) {
             bullet.move();
         }
+        if (boss.canShoot()) {
+
+            ArrayList<Bullet> firedBullets = boss.getWeapon().fire(
+                    boss.getX(),
+                    boss.getY(),
+                    boss.isFacingRight()
+            );
+
+            bossBullets.addAll(firedBullets);
+        }
+        for (Bullet bullet : bossBullets) {
+            bullet.move();
+        }
+
 
         frameCounter++;
 
@@ -286,6 +302,29 @@ public class GameView extends SurfaceView implements Runnable {
                 explosions.remove(i);
             }
         }
+        for (int i = bossBullets.size() - 1; i >= 0; i--) {
+
+            Bullet bullet = bossBullets.get(i);
+
+            Rect bulletRect = new Rect(
+                    (int) bullet.getX() - 6,
+                    (int) bullet.getY() - 6,
+                    (int) bullet.getX() + 6,
+                    (int) bullet.getY() + 6
+            );
+
+            if (Rect.intersects(player.getHitbox(), bulletRect)) {
+
+                player.takeDamage(bullet.getDamage());
+
+                bullet.deactivate();
+
+                bossBullets.remove(i);
+            }
+        }
+        if (player.getHealth() <= 0) {
+            gameState = GAME_OVER;
+        }
     }
 
     private void drawGame(Canvas canvas) {
@@ -314,6 +353,10 @@ public class GameView extends SurfaceView implements Runnable {
                 bgX + canvas.getWidth() * 2,
                 canvas.getHeight()
         );
+        if (gameState == GAME_OVER) {
+            drawGameOver(canvas);
+            return;
+        }
 
         Paint bgPaint = new Paint();
         bgPaint.setFilterBitmap(true);
@@ -475,6 +518,21 @@ public class GameView extends SurfaceView implements Runnable {
             explosion.draw(canvas);
         }
         joystick.draw(canvas);
+        Paint bossBulletPaint = new Paint();
+        bossBulletPaint.setColor(Color.RED);
+
+        for (Bullet bullet : bossBullets) {
+
+            if (bullet.isActive()) {
+
+                canvas.drawCircle(
+                        bullet.getX(),
+                        bullet.getY(),
+                        12,
+                        bossBulletPaint
+                );
+            }
+        }
 
 
         Paint firePaint = new Paint();
@@ -607,6 +665,35 @@ public class GameView extends SurfaceView implements Runnable {
         // Implementation for game screen
     }
 
+    private void drawGameOver(Canvas canvas) {
+        canvas.drawColor(Color.BLACK);
+
+        Paint titlePaint = new Paint();
+        titlePaint.setColor(Color.RED);
+        titlePaint.setTextSize(120);
+        titlePaint.setTextAlign(Paint.Align.CENTER);
+        titlePaint.setFakeBoldText(true);
+
+        canvas.drawText(
+                "GAME OVER",
+                canvas.getWidth() / 2,
+                300,
+                titlePaint
+        );
+
+        Paint textPaint = new Paint();
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(60);
+        textPaint.setTextAlign(Paint.Align.CENTER);
+
+        canvas.drawText(
+                "Tap Anywhere To Restart",
+                canvas.getWidth() / 2,
+                500,
+                textPaint
+        );
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
@@ -638,6 +725,22 @@ public class GameView extends SurfaceView implements Runnable {
             }
 
             return true;
+        }
+
+        // GAME OVER
+        if (gameState == GAME_OVER) {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                player = new Player(100, 560);
+                boss = new Boss(1500, 700);
+
+                bullets.clear();
+                bossBullets.clear();
+                explosions.clear();
+
+                gameState = GAME;
+
+                return true;
+            }
         }
 
         switch (event.getActionMasked()) {
