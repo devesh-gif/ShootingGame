@@ -1,5 +1,5 @@
 package com.example.shootinggame.game;
-
+import com.example.shootinggame.characters.BossAI;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -34,6 +34,7 @@ public class GameView extends SurfaceView implements Runnable {
     private boolean firePressed = false;
     private ArrayList<Explosioneffect> explosions = new ArrayList<>();
     private long lastFireTime = 0;
+    private BossAI bossAI;
 
     private final long FIRE_DELAY = 150; // milliseconds
     private int gameState = MENU;
@@ -94,6 +95,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         player = new Player(100, 560);
         boss = new Boss(1500, 700);
+        bossAI = new BossAI();
 
         joystick = new Joystick(
                 170,
@@ -153,20 +155,11 @@ public class GameView extends SurfaceView implements Runnable {
             bgX = 0;
         }
 
-        boss.moveTowardsPlayer(player.getX());
+
         for (Bullet bullet : bullets) {
             bullet.move();
         }
-        if (boss.canShoot()) {
-
-            ArrayList<Bullet> firedBullets = boss.getWeapon().fire(
-                    boss.getX(),
-                    boss.getY(),
-                    boss.isFacingRight()
-            );
-
-            bossBullets.addAll(firedBullets);
-        }
+        bossAI.update(boss, player, bossBullets);
         for (Bullet bullet : bossBullets) {
             bullet.move();
         }
