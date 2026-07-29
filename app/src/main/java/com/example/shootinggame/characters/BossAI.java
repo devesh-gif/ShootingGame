@@ -1,113 +1,184 @@
 package com.example.shootinggame.characters;
 
 import com.example.shootinggame.bullets.Bullet;
+import com.example.shootinggame.weapons.RocketLauncher;
+import com.example.shootinggame.weapons.SMG;
+import com.example.shootinggame.weapons.Shotgun;
+import com.example.shootinggame.weapons.Sniper;
+
 import java.util.ArrayList;
-import java.util.Random;
 
 public class BossAI {
-    private int burstShots = 0;
-    private long lastMoodChange = 0;
-    private long moodInterval = 4000;
-    private BossAction currentAction = BossAction.IDLE;
+    private BossMemory memory = new BossMemory();
 
-    private long lastThinkTime = 0;
-    private final long THINK_INTERVAL = 3000;
-    private long burstDelay = 150;
-    private long lastBurstShot = 0;
     public void update(Boss boss, Player player, ArrayList<Bullet> bossBullets) {
 
-        updatePhase(boss);
-        updateMood(boss);
-        think(boss);
+        chooseMood(boss, player);
+
+        chooseWeapon(boss, player);
+
         updateMovement(boss, player);
-        updateWeapon(boss);
-        updateAttack(boss, player, bossBullets);
 
+        updateAttack(boss, bossBullets);
+        int distance = Math.abs(player.getX() - boss.getX());
+
+        memory.observePlayer(distance);
     }
 
-    private void updatePhase(Boss boss) {
+    // -------------------------
+    // Mood depends on distance
+    // -------------------------
 
-    }
-
-    private void updateMood(Boss boss) {
-
-    }
-
-    private void updateWeapon(Boss boss) {
-
-    }
-
-    private void updateAttack(Boss boss, Player player, ArrayList<Bullet> bossBullets) {
-
-        long currentTime = System.currentTimeMillis();
-
-        // -------- Phase 1 --------
-        if (boss.getCurrentPhase() == BossPhase.PHASE1) {
-
-            if (boss.canShoot()) {
-
-                bossBullets.addAll(
-                        boss.getWeapon().fire(
-                                boss.getX(),
-                                boss.getY(),
-                                boss.isFacingRight()
-                        )
-                );
-            }
-
-        }
-
-        // -------- Phase 2 --------
-        else if (boss.getCurrentPhase() == BossPhase.PHASE2) {
-
-            if (burstShots == 0 && boss.canShoot()) {
-
-                burstShots = 3;
-                lastBurstShot = currentTime;
-
-            }
-
-            if (burstShots > 0 &&
-                    currentTime - lastBurstShot >= burstDelay) {
-
-                bossBullets.addAll(
-                        boss.getWeapon().fire(
-                                boss.getX(),
-                                boss.getY(),
-                                boss.isFacingRight()
-                        )
-                );
-
-                burstShots--;
-
-                lastBurstShot = currentTime;
-            }
-
-        }
-
-        // -------- Phase 3 --------
-        else {
-
-            if (boss.canShoot()) {
-
-                bossBullets.addAll(
-                        boss.getWeapon().fire(
-                                boss.getX(),
-                                boss.getY(),
-                                boss.isFacingRight()
-                        )
-                );
-            }
-
-        }
-
-    }
-
-    public void updateMovement(Boss boss, Player player) {
+    private void chooseMood(Boss boss, Player player) {
 
         int distance = Math.abs(player.getX() - boss.getX());
 
-        if (boss.getCurrentMood() == BossMood.CALM) {
+        if (distance > 500) {
+
+            boss.setCurrentMood(BossMood.CALM);
+
+        }
+        else if (distance > 200) {
+
+            boss.setCurrentMood(BossMood.AGGRESSIVE);
+
+        }
+        else {
+
+            boss.setCurrentMood(BossMood.ENRAGED);
+
+        }
+        System.out.println("Distance: " + distance);
+        System.out.println("Mood: " + boss.getCurrentMood());
+    }
+
+    // -------------------------
+    // Weapon Selection
+    // -------------------------
+
+    private void chooseWeapon(Boss boss, Player player) {
+
+        switch (boss.getCurrentPhase()) {
+
+            // -----------------
+            // Phase 1
+            // -----------------
+
+            case PHASE1:
+
+                boss.setWeapon(new SMG());
+
+                break;
+
+            // -----------------
+            // Phase 2
+            // -----------------
+
+            case PHASE2:
+
+                switch (boss.getCurrentMood()) {
+
+                    case CALM:
+
+                        boss.setWeapon(new Sniper());
+
+                        break;
+
+                    case AGGRESSIVE:
+
+                        boss.setWeapon(new SMG());
+
+                        break;
+
+                    case ENRAGED:
+
+                        boss.setWeapon(new Shotgun());
+
+                        break;
+                }
+
+                break;
+
+            // -----------------
+            // Phase 3
+            // -----------------
+
+            case PHASE3:
+
+                switch (boss.getCurrentMood()) {
+
+                    case CALM:
+
+                        boss.setWeapon(new Sniper());
+
+                        break;
+
+                    case AGGRESSIVE:
+
+                        boss.setWeapon(new SMG());
+
+                        break;
+
+                    case ENRAGED:
+
+                        boss.setWeapon(new RocketLauncher());
+
+                        break;
+                }
+
+                break;
+        }
+    }
+
+    // -------------------------
+    // Movement
+    // -------------------------
+
+    private void updateMovement(Boss boss, Player player) {
+
+        int distance = Math.abs(player.getX() - boss.getX());
+
+        String weapon = boss.getWeapon().getName();
+
+        // ---------- Shotgun ----------
+
+        if (weapon.equals("Shotgun")) {
+
+            if (distance > 150) {
+
+                boss.moveTowardsPlayer(player.getX());
+
+            }
+
+        }
+
+        // ---------- SMG ----------
+
+        else if (weapon.equals("SMG")) {
+
+            if (distance > 300) {
+
+                boss.moveTowardsPlayer(player.getX());
+
+            }
+
+        }
+
+        // ---------- Sniper ----------
+
+        else if (weapon.equals("Sniper")) {
+
+            if (distance < 500) {
+
+                boss.moveAwayFromPlayer(player.getX());
+
+            }
+
+        }
+
+        // ---------- Rocket ----------
+
+        else if (weapon.equals("Rocket Launcher")) {
 
             if (distance > 350) {
 
@@ -116,65 +187,29 @@ public class BossAI {
             }
 
         }
+    }
 
-        else if (boss.getCurrentMood() == BossMood.AGGRESSIVE) {
+    // -------------------------
+    // Attack
+    // -------------------------
 
-            if (distance > 220) {
+    private void updateAttack(Boss boss,
+                              ArrayList<Bullet> bossBullets) {
 
-                boss.moveTowardsPlayer(player.getX());
+        if (boss.canShoot()) {
 
-            }
+            bossBullets.addAll(
 
-        }
+                    boss.getWeapon().fire(
 
-        else {
+                            boss.getX(),
+                            boss.getY(),
+                            boss.isFacingRight()
 
-            boss.moveTowardsPlayer(player.getX());
+                    )
+
+            );
 
         }
     }
-    private void think(Boss boss) {
-
-        long currentTime = System.currentTimeMillis();
-
-        if (currentTime - lastThinkTime < THINK_INTERVAL)
-            return;
-
-        lastThinkTime = currentTime;
-
-        Random random = new Random();
-
-        if (boss.getCurrentMood() == BossMood.CALM) {
-
-            currentAction = random.nextBoolean()
-                    ? BossAction.SHOOT
-                    : BossAction.CHASE;
-
-        } else if (boss.getCurrentMood() == BossMood.AGGRESSIVE) {
-
-            int choice = random.nextInt(3);
-
-            switch (choice) {
-                case 0:
-                    currentAction = BossAction.BURST_FIRE;
-                    break;
-                case 1:
-                    currentAction = BossAction.CHASE;
-                    break;
-                default:
-                    currentAction = BossAction.SHOOT;
-                    break;
-            }
-
-        } else if (boss.getCurrentMood() == BossMood.DEFENSIVE) {
-
-            currentAction = BossAction.RETREAT;
-
-        } else {
-
-            currentAction = BossAction.DASH;
-        }
-        System.out.println("Boss Action: " + currentAction);
-    }
-
 }

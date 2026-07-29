@@ -8,7 +8,7 @@ import java.util.ArrayList;
 public class Sniper extends Weapon {
 
     public Sniper() {
-        super("Sniper", 60, 700, 40);
+        super("Sniper", 5, 700, 40);
     }
 
     @Override
@@ -16,7 +16,7 @@ public class Sniper extends Weapon {
 
         ArrayList<Bullet> bullets = new ArrayList<>();
 
-        Bullet bullet = new LaserBullet();
+        Bullet bullet = new LaserBullet(damage, bulletSpeed);
 
         if (facingRight) {
             bullet.shoot(x + 130, y + 90, true);

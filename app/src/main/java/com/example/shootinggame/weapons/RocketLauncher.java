@@ -8,7 +8,7 @@ import java.util.ArrayList;
 public class RocketLauncher extends Weapon {
 
     public RocketLauncher() {
-        super("Rocket Launcher", 80, 800, 12);
+        super("Rocket Launcher", 8, 800, 12);
     }
 
     @Override

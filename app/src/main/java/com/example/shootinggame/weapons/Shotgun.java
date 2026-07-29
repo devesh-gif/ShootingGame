@@ -8,7 +8,7 @@ import java.util.ArrayList;
 public class Shotgun extends Weapon {
 
     public Shotgun() {
-        super("Shotgun", 12, 500, 18);
+        super("Shotgun", 1, 500, 18);
     }
 
     @Override

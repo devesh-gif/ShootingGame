@@ -2,8 +2,8 @@ package com.example.shootinggame.bullets;
 
 public class LaserBullet extends Bullet {
 
-    public LaserBullet() {
-        super(60, 30);
+    public LaserBullet(int damage, int speed) {
+        super(damage, speed);
     }
 
     public boolean canPierce() {

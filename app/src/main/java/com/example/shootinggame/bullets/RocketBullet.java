@@ -6,7 +6,7 @@ public class RocketBullet extends Bullet {
     private boolean exploded = false;
 
     public RocketBullet() {
-        super(80, 12);
+        super(8, 12);
     }
 
     public int getExplosionRadius() {
