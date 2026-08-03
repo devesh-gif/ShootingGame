@@ -1,6 +1,8 @@
 package com.example.shootinggame.characters;
 import com.example.shootinggame.weapons.Shotgun;
 import com.example.shootinggame.weapons.RocketLauncher;
+
+import android.graphics.Bitmap;
 import android.graphics.Rect;
 
 import com.example.shootinggame.weapons.Pistol;
@@ -239,6 +241,9 @@ public class Boss extends Character {
 
     public boolean isFacingRight() {
         return facingRight;
+    }
+    public void setFacingRight(boolean facingRight) {
+        this.facingRight = facingRight;
     }
 
     public boolean isDead() {

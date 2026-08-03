@@ -28,6 +28,7 @@ public class GameView extends SurfaceView implements Runnable {
     private static final int SELECT_BACKGROUND = 1;
     private static final int GAME = 2;
     private static final int GAME_OVER = 3;
+    private static final int VICTORY = 4;
     private static final int PLAYER_SIZE = 180;
     private static final int BOSS_SIZE = 280;
     private ArrayList<Bullet> bossBullets = new ArrayList<>();
@@ -35,6 +36,8 @@ public class GameView extends SurfaceView implements Runnable {
     private ArrayList<Explosioneffect> explosions = new ArrayList<>();
     private long lastFireTime = 0;
     private BossAI bossAI;
+    private long playerFlashTime = 0;
+    private final long FLASH_DURATION = 80;
 
     private final long FIRE_DELAY = 150; // milliseconds
     private int gameState = MENU;
@@ -70,11 +73,27 @@ public class GameView extends SurfaceView implements Runnable {
     float joystickY = 0;
     Bitmap forestlightBg;
     Bitmap forestdarkBg;
+    Bitmap bossSMG;
+    Bitmap bossShotgun;
+    Bitmap bossSniper;
+    Bitmap bossRocketLauncher;
+    Bitmap muzzleFlash;
+    public static Bitmap smgBullet;
+
+    public static Bitmap sniperBullet;
+
+    public static Bitmap shotgunPellet;
+
+    public static Bitmap rocketBullet;
+    private SoundManager soundManager;
 
 
     Bitmap currentBg;
     public GameView(Context context) {
         super(context);
+        bossAI = new BossAI();
+        soundManager = new SoundManager(context);
+        bossAI.setSoundManager(soundManager);
 
         holder = getHolder();
 
@@ -92,10 +111,66 @@ public class GameView extends SurfaceView implements Runnable {
         enemyFrames[3] = BitmapFactory.decodeResource(getResources(), R.drawable.enemy4);
         enemyFrames[4] = BitmapFactory.decodeResource(getResources(), R.drawable.enemy5);
         enemyFrames[5] = BitmapFactory.decodeResource(getResources(), R.drawable.enemy6);
+        bossSMG = BitmapFactory.decodeResource(getResources(), R.drawable.boss_smg);
 
-        player = new Player(100, 560);
+        bossShotgun = BitmapFactory.decodeResource(getResources(), R.drawable.boss_shotgun);
+
+        bossSniper = BitmapFactory.decodeResource(getResources(), R.drawable.boss_sniper);
+
+        bossRocketLauncher = BitmapFactory.decodeResource(getResources(), R.drawable.boss_rocketlauncher);
+        player = new Player(100, 760);
         boss = new Boss(1500, 700);
-        bossAI = new BossAI();
+
+        smgBullet = Bitmap.createScaledBitmap(
+                BitmapFactory.decodeResource(
+                        getResources(),
+                        R.drawable.smg_bullet
+                ),
+                28,
+                10,
+                false
+        );
+
+        sniperBullet = Bitmap.createScaledBitmap(
+                BitmapFactory.decodeResource(
+                        getResources(),
+                        R.drawable.sniper_bullet
+                ),
+                75,
+                30,
+                false
+        );
+
+        shotgunPellet = Bitmap.createScaledBitmap(
+                BitmapFactory.decodeResource(
+                        getResources(),
+                        R.drawable.shotgun_pellet
+                ),
+                20,
+                20,
+                false
+        );
+
+        rocketBullet = Bitmap.createScaledBitmap(
+                BitmapFactory.decodeResource(
+                        getResources(),
+                        R.drawable.rocket
+                ),
+                100,
+                100,
+                false
+        );
+        muzzleFlash = BitmapFactory.decodeResource(
+                getResources(),
+                R.drawable.muzzle_flash
+        );
+
+        muzzleFlash = Bitmap.createScaledBitmap(
+                muzzleFlash,
+                50,
+                50,
+                false
+        );
 
         joystick = new Joystick(
                 170,
@@ -151,7 +226,7 @@ public class GameView extends SurfaceView implements Runnable {
             bgX -= bgSpeed;
         }
 
-        if (bgX <= -currentBg.getWidth()) {
+        if (bgX <= -getWidth()) {
             bgX = 0;
         }
 
@@ -270,8 +345,31 @@ public class GameView extends SurfaceView implements Runnable {
                 );
 
                 bullets.addAll(firedBullets);
+                switch (player.getWeapon().getName()) {
+
+                    case "Pistol":
+                        soundManager.playPistol();
+                        break;
+
+                    case "SMG":
+                        soundManager.playSMG();
+                        break;
+
+                    case "Shotgun":
+                        soundManager.playShotgun();
+                        break;
+
+                    case "Sniper":
+                        soundManager.playSniper();
+                        break;
+
+                    case "Rocket Launcher":
+                        soundManager.playRocket();
+                        break;
+                }
 
                     lastFireTime = currentTime;
+                playerFlashTime = System.currentTimeMillis();
                 }
             }
 
@@ -318,7 +416,12 @@ public class GameView extends SurfaceView implements Runnable {
         if (player.getHealth() <= 0) {
             gameState = GAME_OVER;
         }
+        if (boss.getHealth() <= 0) {
+            gameState = VICTORY;
+            soundManager.playVictory();
+        }
     }
+
 
     private void drawGame(Canvas canvas) {
         if (gameState == MENU) {
@@ -327,6 +430,14 @@ public class GameView extends SurfaceView implements Runnable {
         }
         if (gameState == SELECT_BACKGROUND) {
             drawBackgroundSelection(canvas);
+            return;
+        }
+        if (gameState == GAME_OVER) {
+            drawGameOver(canvas);
+            return;
+        }
+        if (gameState == VICTORY) {
+            drawVictory(canvas);
             return;
         }
 
@@ -340,23 +451,33 @@ public class GameView extends SurfaceView implements Runnable {
                 canvas.getHeight()
         );
 
+
         Rect dst2 = new Rect(
                 bgX + canvas.getWidth(),
                 0,
                 bgX + canvas.getWidth() * 2,
                 canvas.getHeight()
         );
-        if (gameState == GAME_OVER) {
-            drawGameOver(canvas);
-            return;
-        }
+
 
         Paint bgPaint = new Paint();
         bgPaint.setFilterBitmap(true);
         bgPaint.setAntiAlias(true);
+        bgPaint.setAlpha(210);
 
         canvas.drawBitmap(currentBg, null, dst1, bgPaint);
         canvas.drawBitmap(currentBg, null, dst2, bgPaint);
+        Paint fogPaint = new Paint();
+        fogPaint.setColor(Color.argb(40, 255, 255, 255));
+
+        canvas.drawRect(
+                0,
+                0,
+                canvas.getWidth(),
+                canvas.getHeight(),
+                fogPaint
+        );
+
         Paint borderPaint = new Paint();
         borderPaint.setColor(Color.WHITE);
         borderPaint.setStyle(Paint.Style.STROKE);
@@ -375,7 +496,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         int barWidth = 300;
         int barHeight = 30;
-        canvas.drawText("PLAYER",40,50,textPaint);
+        canvas.drawText("PLAYER", 40, 50, textPaint);
         // ENEMY HEALTH BAR
         int enemyBarWidth = 300;
         int enemyLeft = canvas.getWidth() - 340;
@@ -421,26 +542,26 @@ public class GameView extends SurfaceView implements Runnable {
         canvas.drawRect(
                 40,
                 70,
-                40+barWidth,
-                70+barHeight,
+                40 + barWidth,
+                70 + barHeight,
                 barBgPaint);
 
         canvas.drawRect(
                 40,
                 70,
-                40+(player.getHealth()*barWidth/player.getMaxHealth()),
-                70+barHeight,
+                40 + (player.getHealth() * barWidth / player.getMaxHealth()),
+                70 + barHeight,
                 healthPaint);
 
         canvas.drawRect(
                 40,
                 70,
-                40+barWidth,
-                70+barHeight,
+                40 + barWidth,
+                70 + barHeight,
                 borderPaint);
 
         canvas.drawText(
-                player.getHealth()+"/"+player.getMaxHealth(),
+                player.getHealth() + "/" + player.getMaxHealth(),
                 120,
                 130,
                 textPaint);
@@ -479,96 +600,200 @@ public class GameView extends SurfaceView implements Runnable {
         } else {
             canvas.drawBitmap(idleBitmap, playerMatrix, null);
         }
+        if (System.currentTimeMillis() - playerFlashTime < FLASH_DURATION) {
 
-        // Boss Drawing
-        Matrix bossMatrix = new Matrix();
-        if (boss.isFacingRight()) {
-            bossMatrix.postTranslate(boss.getX(), boss.getY());
-        } else {
-            bossMatrix.preScale(-1, 1);
-            bossMatrix.postTranslate(boss.getX() + enemyBitmap.getWidth(), boss.getY());
-        }
-        canvas.drawBitmap(enemyBitmap, bossMatrix, null);
+            Matrix flashMatrix = new Matrix();
 
-        Paint bulletPaint = new Paint();
-        bulletPaint.setColor(Color.YELLOW);
+            if (player.isFacingRight()) {
 
-        for (Bullet bullet : bullets) {
+                flashMatrix.postTranslate(
+                        player.getX() + 120,
+                        player.getY() + 70
+                );
 
-            if (bullet.isActive()) {
+            } else {
 
-                canvas.drawCircle(
-                        bullet.getX(),
-                        bullet.getY(),
-                        12,
-                        bulletPaint
+                flashMatrix.preScale(-1, 1);
+
+                flashMatrix.postTranslate(
+                        player.getX() + 60,
+                        player.getY() + 70
                 );
 
             }
 
+            canvas.drawBitmap(
+                    muzzleFlash,
+                    flashMatrix,
+                    null
+            );
         }
-        for (Explosioneffect explosion : explosions) {
-            explosion.draw(canvas);
-        }
-        joystick.draw(canvas);
-        Paint bossBulletPaint = new Paint();
-        bossBulletPaint.setColor(Color.RED);
 
-        for (Bullet bullet : bossBullets) {
+            // ---------------- Boss Drawing ----------------
 
-            if (bullet.isActive()) {
+            // ---------------- Boss Drawing ----------------
 
-                canvas.drawCircle(
-                        bullet.getX(),
-                        bullet.getY(),
-                        12,
-                        bossBulletPaint
+            Bitmap bossBitmap;
+
+// Walking animation
+            if (bossAI.isWalking()) {
+
+                bossBitmap = Bitmap.createScaledBitmap(
+
+                        enemyFrames[enemyFrame],
+
+                        280,
+
+                        280,
+
+                        false
+
                 );
+
             }
+
+// Aiming / Shooting / Recover
+            else {
+
+                switch (boss.getWeapon().getName()) {
+
+                    case "SMG":
+
+                        bossBitmap = bossSMG;
+
+                        break;
+
+                    case "Shotgun":
+
+                        bossBitmap = bossShotgun;
+
+                        break;
+
+                    case "Sniper":
+
+                        bossBitmap = bossSniper;
+
+                        break;
+
+                    default:
+
+                        bossBitmap = bossRocketLauncher;
+
+                        break;
+
+                }
+
+                bossBitmap = Bitmap.createScaledBitmap(
+
+                        bossBitmap,
+
+                        280,
+
+                        280,
+
+                        false
+
+                );
+
+            }
+
+            Matrix bossMatrix = new Matrix();
+
+            if (boss.isFacingRight()) {
+
+                bossMatrix.postTranslate(
+
+                        boss.getX(),
+
+                        boss.getY()
+
+                );
+
+            } else {
+
+                bossMatrix.preScale(-1, 1);
+
+                bossMatrix.postTranslate(
+
+                        boss.getX() + bossBitmap.getWidth(),
+
+                        boss.getY()
+
+                );
+
+            }
+
+            canvas.drawBitmap(
+
+                    bossBitmap,
+
+                    bossMatrix,
+
+                    null
+
+            );
+
+
+            for (Explosioneffect explosion : explosions) {
+                explosion.draw(canvas);
+            }
+            joystick.draw(canvas);
+
+            for (Bullet bullet : bullets) {
+
+                bullet.draw(canvas);
+
+            }
+
+            for (Bullet bullet : bossBullets) {
+
+                bullet.draw(canvas);
+
+            }
+
+
+            Paint firePaint = new Paint();
+            firePaint.setColor(Color.RED);
+
+            int fireX = canvas.getWidth() - 150;
+            int fireY = canvas.getHeight() - 150;
+
+            canvas.drawCircle(fireX, fireY, 80, firePaint);
+
+            firePaint.setColor(Color.WHITE);
+            firePaint.setTextSize(40);
+
+            canvas.drawText(
+                    "FIRE",
+                    fireX - 45,
+                    fireY + 15,
+                    firePaint
+            );
+            jumpButton = new Rect(
+                    canvas.getWidth() - 420,
+                    canvas.getHeight() - 230,
+                    canvas.getWidth() - 270,
+                    canvas.getHeight() - 80
+            );
+
+            Paint jumpPaint = new Paint();
+            jumpPaint.setColor(Color.BLUE);
+
+            canvas.drawOval(
+                    new android.graphics.RectF(jumpButton),
+                    jumpPaint
+            );
+
+            jumpPaint.setColor(Color.WHITE);
+            jumpPaint.setTextSize(40);
+            canvas.drawText(
+                    "JUMP",
+                    jumpButton.left + 15,
+                    jumpButton.centerY() + 15,
+                    jumpPaint
+            );
         }
 
-
-        Paint firePaint = new Paint();
-        firePaint.setColor(Color.RED);
-
-        int fireX = canvas.getWidth() - 150;
-        int fireY = canvas.getHeight() - 150;
-
-        canvas.drawCircle(fireX, fireY, 80, firePaint);
-
-        firePaint.setColor(Color.WHITE);
-        firePaint.setTextSize(40);
-
-        canvas.drawText(
-                "FIRE",
-                fireX - 45,
-                fireY + 15,
-                firePaint
-        );
-        jumpButton = new Rect(
-                canvas.getWidth() - 420,
-                canvas.getHeight() - 230,
-                canvas.getWidth() - 270,
-                canvas.getHeight() - 80
-        );
-
-        Paint jumpPaint = new Paint();
-        jumpPaint.setColor(Color.BLUE);
-
-        canvas.drawOval(
-                new android.graphics.RectF(jumpButton),
-                jumpPaint
-        );
-
-        jumpPaint.setColor(Color.WHITE);
-        jumpPaint.setTextSize(40);
-        canvas.drawText(
-                "JUMP",
-                jumpButton.left + 15,
-                jumpButton.centerY() + 15,
-                jumpPaint
-        );
-    }
 
     private void drawMenu(Canvas canvas) {
         canvas.drawColor(Color.BLUE);
@@ -686,6 +911,51 @@ public class GameView extends SurfaceView implements Runnable {
                 textPaint
         );
     }
+    private void drawVictory(Canvas canvas) {
+
+        // Dark transparent background
+        canvas.drawColor(Color.argb(220, 0, 0, 0));
+
+        Paint titlePaint = new Paint();
+        titlePaint.setColor(Color.YELLOW);
+        titlePaint.setTextSize(100);
+        titlePaint.setFakeBoldText(true);
+        titlePaint.setTextAlign(Paint.Align.CENTER);
+
+        Paint textPaint = new Paint();
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(50);
+        textPaint.setTextAlign(Paint.Align.CENTER);
+
+        int centerX = canvas.getWidth() / 2;
+
+        canvas.drawText(
+                "MISSION COMPLETE",
+                centerX,
+                250,
+                titlePaint
+        );
+
+        canvas.drawText(
+                "Boss Defeated!",
+                centerX,
+                350,
+                textPaint
+        );
+        canvas.drawText(
+                "Congratulations!",
+                centerX,
+                450,
+                textPaint
+        );
+
+        canvas.drawText(
+                "Tap Anywhere To Continue",
+                centerX,
+                600,
+                textPaint
+        );
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -734,6 +1004,24 @@ public class GameView extends SurfaceView implements Runnable {
 
                 return true;
             }
+        }
+            if (gameState == VICTORY) {
+
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+
+                    player = new Player(100, 560);
+                    boss = new Boss(1100, 700);
+
+                    bullets.clear();
+                    bossBullets.clear();
+                    explosions.clear();
+
+                    bgX = 0;
+
+                    gameState = MENU;
+
+                    return true;
+                }
         }
 
         switch (event.getActionMasked()) {

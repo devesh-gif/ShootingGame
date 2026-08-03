@@ -1,26 +1,19 @@
 package com.example.shootinggame.bullets;
 
+import android.graphics.Bitmap;
+
 public class RocketBullet extends Bullet {
 
-    private final int explosionRadius = 120;
-    private boolean exploded = false;
+    public RocketBullet(Bitmap bitmap) {
 
-    public RocketBullet() {
-        super(8, 12);
+        super(8,12);
+
+        bulletImage = bitmap;
+
     }
+    private int explosionRadius = 120;
 
     public int getExplosionRadius() {
         return explosionRadius;
-    }
-
-    public boolean hasExploded() {
-        return exploded;
-    }
-
-    public void explode() {
-
-        exploded = true;
-
-        deactivate();
     }
 }

@@ -41,4 +41,6 @@ public abstract class Character {
     public void setDamage(int damage) {
         this.damage = damage;
     }
+
+
 }

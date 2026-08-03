@@ -1,14 +1,17 @@
 package com.example.shootinggame.weapons;
 
+import android.graphics.Bitmap;
+
 import com.example.shootinggame.bullets.Bullet;
 import com.example.shootinggame.bullets.NormalBullet;
+import com.example.shootinggame.game.GameView;
 
 import java.util.ArrayList;
 
 public class SMG extends Weapon {
 
     public SMG() {
-        super("SMG", 2, 70, 25);
+        super("SMG", 5, 70, 25);
     }
 
     @Override
@@ -16,7 +19,13 @@ public class SMG extends Weapon {
 
         ArrayList<Bullet> bullets = new ArrayList<>();
 
-        Bullet bullet = new NormalBullet(damage, bulletSpeed);
+        Bullet bullet = new NormalBullet(
+                damage,
+                bulletSpeed,
+                GameView.smgBullet
+        );
+        bullet.setRange(600);
+
 
         if (facingRight) {
             bullet.shoot(x + 130, y + 90, true);
