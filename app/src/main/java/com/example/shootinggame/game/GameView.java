@@ -796,14 +796,86 @@ public class GameView extends SurfaceView implements Runnable {
 
 
     private void drawMenu(Canvas canvas) {
-        canvas.drawColor(Color.BLUE);
-        Paint paint = new Paint();
-        paint.setColor(Color.WHITE);
-        paint.setTextSize(100);
-        paint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("SHOOTING GAME", canvas.getWidth() / 2, canvas.getHeight() / 2 - 100, paint);
-        paint.setTextSize(50);
-        canvas.drawText("Tap to Play", canvas.getWidth() / 2, canvas.getHeight() / 2 + 50, paint);
+
+        // Background
+        canvas.drawBitmap(
+                currentBg,
+                null,
+                new Rect(0, 0, canvas.getWidth(), canvas.getHeight()),
+                null
+        );
+
+        // Dark overlay
+        Paint overlay = new Paint();
+        overlay.setColor(Color.argb(170, 0, 0, 0));
+        canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), overlay);
+
+        // Title
+        Paint titlePaint = new Paint();
+        titlePaint.setColor(Color.YELLOW);
+        titlePaint.setTextSize(110);
+        titlePaint.setFakeBoldText(true);
+        titlePaint.setTextAlign(Paint.Align.CENTER);
+
+        // Shadow
+        Paint shadowPaint = new Paint(titlePaint);
+        shadowPaint.setColor(Color.BLACK);
+
+        canvas.drawText(
+                "SHOOTING GAME",
+                canvas.getWidth()/2 + 5,
+                205,
+                shadowPaint
+        );
+
+        canvas.drawText(
+                "SHOOTING GAME",
+                canvas.getWidth()/2,
+                200,
+                titlePaint
+        );
+
+        // Subtitle
+        Paint subPaint = new Paint();
+        subPaint.setColor(Color.LTGRAY);
+        subPaint.setTextSize(45);
+        subPaint.setTextAlign(Paint.Align.CENTER);
+
+        canvas.drawText(
+                "Defeat the Boss",
+                canvas.getWidth()/2,
+                280,
+                subPaint
+        );
+
+        // Tap To Play
+        Paint playPaint = new Paint();
+        playPaint.setColor(Color.WHITE);
+        playPaint.setTextSize(65);
+        playPaint.setFakeBoldText(true);
+        playPaint.setTextAlign(Paint.Align.CENTER);
+
+        if ((System.currentTimeMillis()/500)%2==0) {
+
+            canvas.drawText(
+                    "▶ TAP TO PLAY ◀",
+                    canvas.getWidth()/2,
+                    canvas.getHeight()-220,
+                    playPaint
+            );
+        }
+
+        // Version
+        Paint versionPaint = new Paint();
+        versionPaint.setColor(Color.GRAY);
+        versionPaint.setTextSize(30);
+
+        canvas.drawText(
+                "Version 1.0",
+                120,
+                canvas.getHeight()-40,
+                versionPaint
+        );
     }
 
     private void drawBackgroundSelection(Canvas canvas) {
