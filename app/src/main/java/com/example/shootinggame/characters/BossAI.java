@@ -159,25 +159,10 @@ public class BossAI {
 
             case PHASE3:
 
-                switch (boss.getCurrentMood()) {
-
-                    case CALM:
-
-                        boss.setWeapon(new Sniper());
-
-                        break;
-
-                    case AGGRESSIVE:
-
-                        boss.setWeapon(new SMG());
-
-                        break;
-
-                    case ENRAGED:
-
-                        boss.setWeapon(new RocketLauncher());
-
-                        break;
+                if (Math.random() < 0.5) {
+                    boss.setWeapon(new Sniper());
+                } else {
+                    boss.setWeapon(new RocketLauncher());
                 }
 
                 break;
