@@ -11,7 +11,7 @@ import java.util.ArrayList;
 public class Pistol extends Weapon {
 
     public Pistol() {
-        super("Pistol", 50, 150, 20);
+        super("Pistol", 5, 150, 20);
     }
 
 
