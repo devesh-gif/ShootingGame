@@ -879,76 +879,188 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     private void drawBackgroundSelection(Canvas canvas) {
-        canvas.drawColor(Color.BLACK);
+        bgX -= 2;
 
-        Paint titlePaint = new Paint();
-        titlePaint.setColor(Color.WHITE);
-        titlePaint.setTextSize(80);
-        titlePaint.setTextAlign(Paint.Align.CENTER);
+        if (bgX <= -canvas.getWidth()) {
+            bgX = 0;
+        }
 
-        canvas.drawText(
-                "SELECT BACKGROUND",
-                canvas.getWidth() / 2,
-                150,
-                titlePaint
+        // ---------------- Scrolling Background ----------------
+
+        Rect dst1 = new Rect(
+                bgX,
+                0,
+                bgX + canvas.getWidth(),
+                canvas.getHeight()
         );
 
-        lightForestButton = new Rect(
+        Rect dst2 = new Rect(
+                bgX + canvas.getWidth(),
+                0,
+                bgX + canvas.getWidth() * 2,
+                canvas.getHeight()
+        );
+
+        Paint bgPaint = new Paint();
+        bgPaint.setFilterBitmap(true);
+
+        canvas.drawBitmap(currentBg, null, dst1, bgPaint);
+        canvas.drawBitmap(currentBg, null, dst2, bgPaint);
+
+        // ---------------- Dark Overlay ----------------
+
+        Paint overlay = new Paint();
+        overlay.setColor(Color.argb(170, 0, 0, 0));
+        canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), overlay);
+
+        // ---------------- Title ----------------
+
+        Paint shadow = new Paint();
+        shadow.setColor(Color.BLACK);
+        shadow.setTextSize(90);
+        shadow.setFakeBoldText(true);
+        shadow.setTextAlign(Paint.Align.CENTER);
+
+        Paint title = new Paint();
+        title.setColor(Color.YELLOW);
+        title.setTextSize(90);
+        title.setFakeBoldText(true);
+        title.setTextAlign(Paint.Align.CENTER);
+
+        canvas.drawText(
+                "SELECT MAP",
+                canvas.getWidth() / 2 + 4,
+                124,
+                shadow
+        );
+
+        canvas.drawText(
+                "SELECT MAP",
+                canvas.getWidth() / 2,
                 120,
-                250,
-                canvas.getWidth() - 120,
-                500
+                title
+        );
+
+        // ---------------- Buttons ----------------
+
+        int margin = 500;
+        int previewHeight = 250;
+
+        lightForestButton = new Rect(
+                margin,
+                180,
+                canvas.getWidth() - margin,
+                180 + previewHeight
         );
 
         darkForestButton = new Rect(
-                120,
-                600,
-                canvas.getWidth() - 120,
-                850
+                margin,
+                520,
+                canvas.getWidth() - margin,
+                520 + previewHeight
+        );
+
+        Paint border = new Paint();
+        border.setColor(Color.WHITE);
+        border.setStyle(Paint.Style.STROKE);
+        border.setStrokeWidth(6);
+
+        // ---------------- Light Forest ----------------
+
+        Bitmap light = Bitmap.createScaledBitmap(
+                forestlightBg,
+                lightForestButton.width(),
+                lightForestButton.height(),
+                false
         );
 
         canvas.drawBitmap(
-                Bitmap.createScaledBitmap(
-                        forestlightBg,
-                        lightForestButton.width(),
-                        lightForestButton.height(),
-                        true
-                ),
+                light,
                 lightForestButton.left,
                 lightForestButton.top,
                 null
         );
 
+        canvas.drawRect(lightForestButton, border);
+
+        // ---------------- Dark Forest ----------------
+
+        Bitmap dark = Bitmap.createScaledBitmap(
+                forestdarkBg,
+                darkForestButton.width(),
+                darkForestButton.height(),
+                false
+        );
+
         canvas.drawBitmap(
-                Bitmap.createScaledBitmap(
-                        forestdarkBg,
-                        darkForestButton.width(),
-                        darkForestButton.height(),
-                        true
-                ),
+                dark,
                 darkForestButton.left,
                 darkForestButton.top,
                 null
         );
 
-        Paint textPaint = new Paint();
-        textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(50);
-        textPaint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawRect(darkForestButton, border);
+
+        // ---------------- Labels ----------------
+
+        Paint label = new Paint();
+        label.setColor(Color.WHITE);
+        label.setTextSize(48);
+        label.setFakeBoldText(true);
+        label.setTextAlign(Paint.Align.CENTER);
 
         canvas.drawText(
-                "Light Forest",
+                "🌲 LIGHT FOREST",
                 lightForestButton.centerX(),
-                lightForestButton.bottom + 60,
-                textPaint
+                lightForestButton.bottom + 55,
+                label
         );
 
         canvas.drawText(
-                "Dark Forest",
+                "🌑 DARK FOREST",
                 darkForestButton.centerX(),
-                darkForestButton.bottom + 60,
-                textPaint
-        );// Implementation for background selection
+                darkForestButton.bottom + 55,
+                label
+        );
+
+        // ---------------- Difficulty ----------------
+
+        Paint info = new Paint();
+        info.setColor(Color.LTGRAY);
+        info.setTextSize(32);
+        info.setTextAlign(Paint.Align.CENTER);
+
+        canvas.drawText(
+                "Easy • Clear Visibility",
+                lightForestButton.centerX(),
+                lightForestButton.bottom + 95,
+                info
+        );
+
+        canvas.drawText(
+                "Hard • Low Visibility",
+                darkForestButton.centerX(),
+                darkForestButton.bottom + 95,
+                info
+        );
+
+        // ---------------- Blinking Hint ----------------
+
+        Paint hint = new Paint();
+        hint.setColor(Color.WHITE);
+        hint.setTextSize(40);
+        hint.setFakeBoldText(true);
+        hint.setTextAlign(Paint.Align.CENTER);
+
+        if ((System.currentTimeMillis() / 500) % 2 == 0) {
+
+            canvas.drawText(
+                    "▶ TAP A MAP TO START ◀",
+                    canvas.getWidth() / 2,
+                    canvas.getHeight() - 40,
+                    hint
+            );
+        }
     }
 
     private void drawGameScreen(Canvas canvas) {
